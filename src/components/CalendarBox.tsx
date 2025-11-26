@@ -1,15 +1,54 @@
 import { Gift, Lock, Star } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { formatUnlockTimestamp } from '../utils/timeUtils';
 
 interface CalendarBoxProps {
   day: number;
   isUnlocked: boolean;
   isToday: boolean;
+  manualUnlock: boolean;
+  unlockDateUtc: Date;
+  nowUtc: Date;
   onOpen: () => void;
 }
+const formatCountdownLabel = (milliseconds: number) => {
+  if (milliseconds <= 0) {
+    return 'any moment now';
+  }
 
-export function CalendarBox({ day, isUnlocked, isToday, onOpen }: CalendarBoxProps) {
+  const totalMinutes = Math.ceil(milliseconds / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes - days * 24 * 60) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return `${days} day${days === 1 ? '' : 's'} at noon`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+};
+
+export function CalendarBox({
+  day,
+  isUnlocked,
+  isToday,
+  manualUnlock,
+  unlockDateUtc,
+  nowUtc,
+  onOpen,
+}: CalendarBoxProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const timeUntilUnlockMs = useMemo(
+    () => Math.max(0, unlockDateUtc.getTime() - nowUtc.getTime()),
+    [unlockDateUtc, nowUtc],
+  );
+  const unlockTimestamp = useMemo(() => formatUnlockTimestamp(unlockDateUtc), [unlockDateUtc]);
+  const showCountdown = !isUnlocked && !manualUnlock;
+  const countdownLabel = useMemo(() => formatCountdownLabel(timeUntilUnlockMs), [timeUntilUnlockMs]);
 
   const handleClick = () => {
     if (isUnlocked) {
@@ -46,13 +85,24 @@ export function CalendarBox({ day, isUnlocked, isToday, onOpen }: CalendarBoxPro
         <span className={`text-xl sm:text-3xl md:text-4xl ${isUnlocked ? 'text-white' : 'text-gray-300'}`}>
           {day}
         </span>
-        
+
         {isUnlocked && (
           <Gift 
             className={`w-4 h-4 sm:w-6 sm:h-6 mt-1 sm:mt-2 transition-transform duration-300 ${
               isHovered ? 'scale-125 rotate-12' : ''
             } text-yellow-300`}
           />
+        )}
+
+        {showCountdown && (
+          <span className="mt-2 text-[0.55rem] sm:text-xs md:text-sm text-white/90 text-center leading-tight px-2">
+            Unlocks in {countdownLabel}
+            {unlockTimestamp && (
+              <span className="block text-[0.5rem] sm:text-[0.65rem] text-white/60 mt-1">
+                {unlockTimestamp}
+              </span>
+            )}
+          </span>
         )}
       </div>
 

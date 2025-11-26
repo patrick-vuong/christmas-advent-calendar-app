@@ -3,8 +3,11 @@
   import react from '@vitejs/plugin-react-swc';
   import path from 'path';
 
+  const isProduction = process.env.NODE_ENV === 'production';
+  const basePath = process.env.VITE_BASE_URL ?? (isProduction ? '/christmas-advent-calendar-app/' : '/');
+
   export default defineConfig({
-    base: '/christmas-advent-calendar-app/',
+    base: basePath,
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],

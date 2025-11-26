@@ -1,41 +1,87 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarBox } from './components/CalendarBox';
 import { ComicPanel } from './components/ComicPanel';
 import { storySegments } from './data/storyData';
 import { Sparkles } from 'lucide-react';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
+import { UnlockToggle } from './components/UnlockToggle';
+import {
+  CalendarStatus,
+  formatUnlockTimestamp,
+  getCalendarStatus,
+  getUnlockDateUtc,
+  TOTAL_ADVENT_DAYS,
+} from './utils/timeUtils';
+
+const MANUAL_UNLOCK_STORAGE_KEY = 'holiday-advent-calendar:manual-unlock';
+const CALENDAR_REFRESH_INTERVAL = 60_000; // 60 seconds
 
 export default function App() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-
-  // Get current date for testing - in production, this would check actual December 2025 dates
-  const getCurrentDay = () => {
-    // For demo purposes, unlock all 24 days so you can view all comics
-    return 24;
-    
-    /* Original date-based logic (commented out for demo):
-    const now = new Date();
-    const december2025Start = new Date('2025-12-01');
-    const today = new Date();
-    
-    if (today < december2025Start) {
-      return 1;
+  const [calendarStatus, setCalendarStatus] = useState<CalendarStatus>(() => getCalendarStatus());
+  const [manualUnlock, setManualUnlock] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.localStorage.getItem(MANUAL_UNLOCK_STORAGE_KEY) === 'true';
+    } catch (error) {
+      console.warn('Unable to read manual unlock preference', error);
+      return false;
     }
-    
-    if (today.getFullYear() === 2025 && today.getMonth() === 11) {
-      return Math.min(today.getDate(), 24);
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === MANUAL_UNLOCK_STORAGE_KEY && event.newValue != null) {
+        setManualUnlock(event.newValue === 'true');
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  useEffect(() => {
+    const updateStatus = () => setCalendarStatus(getCalendarStatus());
+    updateStatus();
+
+    const timer = window.setInterval(updateStatus, CALENDAR_REFRESH_INTERVAL);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(MANUAL_UNLOCK_STORAGE_KEY, manualUnlock ? 'true' : 'false');
+    } catch (error) {
+      console.warn('Unable to persist manual unlock preference', error);
     }
-    
-    return 24;
-    */
-  };
+  }, [manualUnlock]);
 
-  const currentDay = getCurrentDay();
+  const { unlockedDay, nextUnlockDate, nextUnlockDay, nowUtc } = calendarStatus;
 
-  const isUnlocked = (day: number) => day <= currentDay;
-  const isToday = (day: number) => day === currentDay;
+  const scheduleCurrentDay = unlockedDay > 0 ? unlockedDay : nextUnlockDay ?? 1;
 
-  const selectedSegment = selectedDay ? storySegments.find(s => s.day === selectedDay) : null;
+  const isUnlocked = (day: number) => manualUnlock || day <= unlockedDay;
+  const isToday = (day: number) => day === scheduleCurrentDay && !manualUnlock;
+
+  const selectedSegment = useMemo(() => {
+    if (selectedDay == null) return null;
+    return storySegments.find((segment) => segment.day === selectedDay) ?? null;
+  }, [selectedDay]);
+
+  const headerStatusMessage = manualUnlock
+    ? 'Manual unlock mode enabled — explore any day instantly.'
+    : unlockedDay === 0
+      ? 'First chapter unlocks at 12:00 PM PST on December 1.'
+      : unlockedDay < TOTAL_ADVENT_DAYS
+        ? `Days 1-${unlockedDay} are now available.`
+        : 'All 24 chapters are unlocked!';
+
+  const nextUnlockMessage =
+    !manualUnlock && nextUnlockDay && nextUnlockDate
+      ? `Next unlock: Day ${nextUnlockDay} at ${formatUnlockTimestamp(nextUnlockDate)}`
+      : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 relative overflow-hidden">
@@ -78,9 +124,19 @@ export default function App() {
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 max-w-2xl mx-auto border-2 border-white/20">
             <h2 className="text-yellow-300 mb-2 text-lg sm:text-xl md:text-2xl">🎄 Deep Sleigh Learning - A Holiday Model 🎄</h2>
             <p className="text-white/90 text-xs sm:text-sm md:text-base">
-              Open a new box each day to discover a comic strip chapter of Santa's adventure with AI! 
-              {currentDay < 24 && ` (Days 1-${currentDay} are now available)`}
+              Open a new box each day to discover a comic strip chapter of Santa's adventure with AI!
             </p>
+            <p className="text-blue-100 text-xs sm:text-sm md:text-base mt-2">
+              {headerStatusMessage}
+              {nextUnlockMessage && (
+                <span className="block text-[0.7rem] sm:text-xs md:text-sm text-white/80 mt-1">
+                  {nextUnlockMessage}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="mt-4 flex justify-center">
+            <UnlockToggle enabled={manualUnlock} onChange={(value) => setManualUnlock(value)} />
           </div>
         </header>
 
@@ -92,6 +148,9 @@ export default function App() {
               day={segment.day}
               isUnlocked={isUnlocked(segment.day)}
               isToday={isToday(segment.day)}
+              manualUnlock={manualUnlock}
+              unlockDateUtc={getUnlockDateUtc(segment.day)}
+              nowUtc={nowUtc}
               onOpen={() => setSelectedDay(segment.day)}
             />
           ))}
