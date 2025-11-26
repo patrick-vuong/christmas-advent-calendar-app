@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 
 export const PST_TIMEZONE = 'America/Los_Angeles';
 const ADVENT_YEAR = 2025;
@@ -13,11 +13,11 @@ export const getUnlockDateUtc = (day: number) => {
     throw new Error(`Day must be between 1 and ${TOTAL_DAYS}`);
   }
 
-  const localDate = new Date(`${ADVENT_YEAR}-12-${padDay(day)}T12:00:00`);
-  return fromZonedTime(localDate, PST_TIMEZONE);
+  const isoDate = `${ADVENT_YEAR}-12-${padDay(day)}T12:00:00`;
+  return zonedTimeToUtc(isoDate, PST_TIMEZONE);
 };
 
-export const getNowInPst = (now: Date = new Date()) => toZonedTime(now, PST_TIMEZONE);
+export const getNowInPst = (now: Date = new Date()) => utcToZonedTime(now, PST_TIMEZONE);
 
 export interface CalendarStatus {
   unlockedDay: number;
