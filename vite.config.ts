@@ -4,7 +4,7 @@
   import path from 'path';
 
   const isProduction = process.env.NODE_ENV === 'production';
-  const basePath = process.env.VITE_BASE_URL ?? (isProduction ? '/christmas-advent-calendar-app/' : '/');
+  const basePath = process.env.VITE_BASE_URL ?? '/';
 
   export default defineConfig({
     base: basePath,
