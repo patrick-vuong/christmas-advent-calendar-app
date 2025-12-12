@@ -121,6 +121,15 @@ import { test, expect } from '@playwright/test';
 test.describe('Feature Name', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    
+    // Set localStorage to enable manual unlock mode for testing all 24 days
+    await page.evaluate(() => {
+      localStorage.setItem('holiday-advent-calendar:manual-unlock', 'true');
+    });
+    
+    // Reload to apply the localStorage setting
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
   });
 
   test('should do something', async ({ page }) => {
@@ -128,6 +137,8 @@ test.describe('Feature Name', () => {
   });
 });
 ```
+
+**Note:** The `beforeEach` hook enables manual unlock mode, which allows tests to access all 24 calendar days regardless of the current date. This is essential for reliable testing.
 
 ### CI Integration
 
