@@ -4,14 +4,13 @@ test.describe('Christmas Advent Calendar App', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     
-    // Enable manual unlock mode to access all days for testing
-    // Set localStorage directly to enable manual unlock mode
+    // Set localStorage to enable manual unlock mode for testing all 24 days
     await page.evaluate(() => {
       localStorage.setItem('holiday-advent-calendar:manual-unlock', 'true');
     });
     
-    // Reload the page for the setting to take effect
-    await page.reload();
+    // Reload to apply the localStorage setting
+    await page.goto('/');
     await page.waitForLoadState('networkidle');
   });
 
