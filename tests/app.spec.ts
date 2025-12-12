@@ -3,6 +3,16 @@ import { test, expect } from '@playwright/test';
 test.describe('Christmas Advent Calendar App', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    
+    // Enable manual unlock mode to access all days for testing
+    // Set localStorage directly to enable manual unlock mode
+    await page.evaluate(() => {
+      localStorage.setItem('holiday-advent-calendar:manual-unlock', 'true');
+    });
+    
+    // Reload the page for the setting to take effect
+    await page.reload();
+    await page.waitForLoadState('networkidle');
   });
 
   test('has correct title', async ({ page }) => {
