@@ -3,6 +3,15 @@ import { test, expect } from '@playwright/test';
 test.describe('Christmas Advent Calendar App', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    
+    // Set localStorage to enable manual unlock mode for testing all 24 days
+    await page.evaluate(() => {
+      localStorage.setItem('holiday-advent-calendar:manual-unlock', 'true');
+    });
+    
+    // Reload to apply the localStorage setting
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
   });
 
   test('has correct title', async ({ page }) => {
